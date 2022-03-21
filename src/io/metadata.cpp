@@ -35,6 +35,7 @@ Metadata::~Metadata() {
 void Metadata::Init(data_size_t num_data, int weight_idx, int query_idx) {
   num_data_ = num_data;
   label_ = std::vector<label_t>(num_data_);
+  intent_ = std::vector<double>(num_data_);
   if (weight_idx >= 0) {
     if (!weights_.empty()) {
       Log::Info("Using weights in data file, ignoring the additional weights file");
@@ -59,9 +60,11 @@ void Metadata::Init(const Metadata& fullset, const data_size_t* used_indices, da
   num_data_ = num_used_indices;
 
   label_ = std::vector<label_t>(num_used_indices);
+  intent_ = std::vector<double>(num_used_indices);
 #pragma omp parallel for schedule(static, 512) if (num_used_indices >= 1024)
   for (data_size_t i = 0; i < num_used_indices; ++i) {
     label_[i] = fullset.label_[used_indices[i]];
+    intent_[i] = fullset.intent_[used_indices[i]];
   }
 
   if (!fullset.weights_.empty()) {

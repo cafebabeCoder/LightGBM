@@ -37,6 +37,8 @@ class RankingObjective : public ObjectiveFunction {
     label_ = metadata.label();
     // get weights
     weights_ = metadata.weights();
+
+    intent_ = metadata.intent();
     // get boundries
     query_boundaries_ = metadata.query_boundaries();
     if (query_boundaries_ == nullptr) {
@@ -52,7 +54,7 @@ class RankingObjective : public ObjectiveFunction {
       const data_size_t start = query_boundaries_[i];
       const data_size_t cnt = query_boundaries_[i + 1] - query_boundaries_[i];
       GetGradientsForOneQuery(i, cnt, label_ + start, score + start,
-                              gradients + start, hessians + start);
+                              gradients + start, hessians + start, intent_ + start);
       if (weights_ != nullptr) {
         for (data_size_t j = 0; j < cnt; ++j) {
           gradients[start + j] =
@@ -67,7 +69,7 @@ class RankingObjective : public ObjectiveFunction {
   virtual void GetGradientsForOneQuery(data_size_t query_id, data_size_t cnt,
                                        const label_t* label,
                                        const double* score, score_t* lambdas,
-                                       score_t* hessians) const = 0;
+                                       score_t* hessians, const double* intent) const = 0;
 
   const char* GetName() const override = 0;
 
@@ -84,6 +86,8 @@ class RankingObjective : public ObjectiveFunction {
   data_size_t num_queries_;
   /*! \brief Number of data */
   data_size_t num_data_;
+  /*! \brief Pointer of intent */
+  const double* intent_;
   /*! \brief Pointer of label */
   const label_t* label_;
   /*! \brief Pointer of weights */
@@ -140,7 +144,7 @@ class LambdarankNDCG : public RankingObjective {
   inline void GetGradientsForOneQuery(data_size_t query_id, data_size_t cnt,
                                       const label_t* label, const double* score,
                                       score_t* lambdas,
-                                      score_t* hessians) const override {
+                                      score_t* hessians, const double* intent) const override {
     // get max DCG on current query
     const double inverse_max_dcg = inverse_max_dcgs_[query_id];
     // initialize with zero
@@ -190,6 +194,9 @@ class LambdarankNDCG : public RankingObjective {
         const double low_label_gain = label_gain_[low_label];
         const double low_discount = DCGCalculator::GetDiscount(low_rank);
 
+        const double high_intent = intent[high];
+        const double low_intent = intent[low];
+        const double delta_intent = high_intent - low_intent;
         const double delta_score = high_score - low_score;
 
         // get dcg gap
@@ -197,7 +204,8 @@ class LambdarankNDCG : public RankingObjective {
         // get discount of this pair
         const double paired_discount = fabs(high_discount - low_discount);
         // get delta NDCG
-        double delta_pair_NDCG = dcg_gap * paired_discount * inverse_max_dcg;
+        double delta_pair_NDCG = (dcg_gap + 0.5* delta_intent)* paired_discount * inverse_max_dcg;
+        // Log::Info("query_id=%d, i=%d, j=%d, low label=%d, high label=%d, low intent=%f, high intent=%f",i, j, low_label,high_label, low_intent, high_intent);
         // regular the delta_pair_NDCG by score distance
         if (norm_ && best_score != worst_score) {
           delta_pair_NDCG /= (0.01f + fabs(delta_score));
@@ -214,6 +222,9 @@ class LambdarankNDCG : public RankingObjective {
         hessians[high] += static_cast<score_t>(p_hessian);
         // lambda is negative, so use minus to accumulate
         sum_lambdas -= 2 * p_lambda;
+        // Iteration:1
+        // Log::Info("query_id=%d, i=%d, j=%d, p_lambda=%f, p_hessian=%f, delta_pair_NDCG=%f, delta_score=%f, intent_gap=%f, high_score=%f, low_score=%f",
+          // query_id, i, j, p_lambda, p_hessian, delta_pair_NDCG, delta_score, delta_intent, high_score, low_score);
       }
     }
     if (norm_ && sum_lambdas > 0) {
@@ -301,7 +312,7 @@ class RankXENDCG : public RankingObjective {
   inline void GetGradientsForOneQuery(data_size_t query_id, data_size_t cnt,
                                       const label_t* label, const double* score,
                                       score_t* lambdas,
-                                      score_t* hessians) const override {
+                                      score_t* hessians, const double* intent) const override {
     // Skip groups with too few items.
     if (cnt <= 1) {
       for (data_size_t i = 0; i < cnt; ++i) {

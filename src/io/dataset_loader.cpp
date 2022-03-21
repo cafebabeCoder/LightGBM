@@ -1176,8 +1176,13 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
       // push data
       for (auto& inner_data : oneline_features) {
         if (inner_data.first >= dataset->num_total_features_) { continue; }
+
         int feature_idx = dataset->used_feature_map_[inner_data.first];
         if (feature_idx >= 0) {
+          if (inner_data.first == 26){
+            dataset->metadata_.SetIntentAt(i, inner_data.second);
+            // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
+          }
           is_feature_added[feature_idx] = true;
           // if is used feature
           int group = dataset->feature2group_[feature_idx];
@@ -1235,6 +1240,10 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
         if (inner_data.first >= dataset->num_total_features_) { continue; }
         int feature_idx = dataset->used_feature_map_[inner_data.first];
         if (feature_idx >= 0) {
+          if (inner_data.first == 26){
+            dataset->metadata_.SetIntentAt(i, inner_data.second);
+            // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
+          }
           is_feature_added[feature_idx] = true;
           // if is used feature
           int group = dataset->feature2group_[feature_idx];
@@ -1306,6 +1315,9 @@ void DatasetLoader::ExtractFeaturesFromFile(const char* filename, const Parser* 
       // push data
       for (auto& inner_data : oneline_features) {
         if (inner_data.first >= dataset->num_total_features_) { continue; }
+        // if (inner_data.first == 1){
+          // dataset->metadata_.SetIntentAt(start_idx + i, inner_data.second);
+        // }
         int feature_idx = dataset->used_feature_map_[inner_data.first];
         if (feature_idx >= 0) {
           is_feature_added[feature_idx] = true;

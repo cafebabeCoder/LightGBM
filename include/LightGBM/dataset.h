@@ -87,6 +87,7 @@ class Metadata {
                         const std::vector<data_size_t>& used_data_indices);
 
   void SetLabel(const label_t* label, data_size_t len);
+  void SetIntent(const double* intent, data_size_t len);
 
   void SetWeights(const label_t* weights, data_size_t len);
 
@@ -115,7 +116,11 @@ class Metadata {
   * \return Pointer of label
   */
   inline const label_t* label() const { return label_.data(); }
-
+  /*!
+  * \brief Get pointer of intent 
+  * \return Pointer of intent 
+  */
+  inline const double* intent() const { return intent_.data(); }
   /*!
   * \brief Set label for one record
   * \param idx Index of this record
@@ -124,7 +129,14 @@ class Metadata {
   inline void SetLabelAt(data_size_t idx, label_t value) {
     label_[idx] = value;
   }
-
+  /*!
+  * \brief Set intent for one record
+  * \param idx Index of this record
+  * \param value Label value of this record
+  */
+  inline void SetIntentAt(data_size_t idx, label_t value) {
+    intent_[idx] = value;
+  }
   /*!
   * \brief Set Weight for one record
   * \param idx Index of this record
@@ -227,6 +239,9 @@ class Metadata {
   data_size_t num_weights_;
   /*! \brief Label data */
   std::vector<label_t> label_;
+  /*! \brief Intent data */
+  std::vector<double> intent_;
+
   /*! \brief Weights data */
   std::vector<label_t> weights_;
   /*! \brief Query boundaries */
