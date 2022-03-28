@@ -39,6 +39,7 @@ class RankingObjective : public ObjectiveFunction {
     weights_ = metadata.weights();
 
     intent_ = metadata.intent();
+    qfreq_ = metadata.qfreq();
     // get boundries
     query_boundaries_ = metadata.query_boundaries();
     if (query_boundaries_ == nullptr) {
@@ -54,7 +55,7 @@ class RankingObjective : public ObjectiveFunction {
       const data_size_t start = query_boundaries_[i];
       const data_size_t cnt = query_boundaries_[i + 1] - query_boundaries_[i];
       GetGradientsForOneQuery(i, cnt, label_ + start, score + start,
-                              gradients + start, hessians + start, intent_ + start);
+                              gradients + start, hessians + start, intent_ + start, qfreq_ + start);
       if (weights_ != nullptr) {
         for (data_size_t j = 0; j < cnt; ++j) {
           gradients[start + j] =
@@ -69,7 +70,7 @@ class RankingObjective : public ObjectiveFunction {
   virtual void GetGradientsForOneQuery(data_size_t query_id, data_size_t cnt,
                                        const label_t* label,
                                        const double* score, score_t* lambdas,
-                                       score_t* hessians, const double* intent) const = 0;
+                                       score_t* hessians, const double* intent, const double* qfreq) const = 0;
 
   const char* GetName() const override = 0;
 
@@ -88,6 +89,8 @@ class RankingObjective : public ObjectiveFunction {
   data_size_t num_data_;
   /*! \brief Pointer of intent */
   const double* intent_;
+  /*! \brief Pointer of qfreq */
+  const double* qfreq_;
   /*! \brief Pointer of label */
   const label_t* label_;
   /*! \brief Pointer of weights */
@@ -144,7 +147,7 @@ class LambdarankNDCG : public RankingObjective {
   inline void GetGradientsForOneQuery(data_size_t query_id, data_size_t cnt,
                                       const label_t* label, const double* score,
                                       score_t* lambdas,
-                                      score_t* hessians, const double* intent) const override {
+                                      score_t* hessians, const double* intent, const double* qfreq) const override {
     // get max DCG on current query
     const double inverse_max_dcg = inverse_max_dcgs_[query_id];
     // initialize with zero
@@ -169,62 +172,142 @@ class LambdarankNDCG : public RankingObjective {
     const double worst_score = score[sorted_idx[worst_idx]];
     double sum_lambdas = 0.0;
     // start accmulate lambdas by pairs that contain at least one document above truncation level
-    for (data_size_t i = 0; i < cnt - 1 && i < truncation_level_; ++i) {
-      if (score[sorted_idx[i]] == kMinScore) { continue; }
-      for (data_size_t j = i + 1; j < cnt; ++j) {
-        if (score[sorted_idx[j]] == kMinScore) { continue; }
-        // skip pairs with the same labels
-        if (label[sorted_idx[i]] == label[sorted_idx[j]]) { continue; }
-        data_size_t high_rank, low_rank;
-        if (label[sorted_idx[i]] > label[sorted_idx[j]]) {
-          high_rank = i;
-          low_rank = j;
-        } else {
-          high_rank = j;
-          low_rank = i;
-        }
-        const data_size_t high = sorted_idx[high_rank];
-        const int high_label = static_cast<int>(label[high]);
-        const double high_score = score[high];
-        const double high_label_gain = label_gain_[high_label];
-        const double high_discount = DCGCalculator::GetDiscount(high_rank);
-        const data_size_t low = sorted_idx[low_rank];
-        const int low_label = static_cast<int>(label[low]);
-        const double low_score = score[low];
-        const double low_label_gain = label_gain_[low_label];
-        const double low_discount = DCGCalculator::GetDiscount(low_rank);
 
-        const double high_intent = intent[high];
-        const double low_intent = intent[low];
-        const double delta_intent = high_intent - low_intent;
-        const double delta_score = high_score - low_score;
+    const double t_qfreq = qfreq[0];
+    if(t_qfreq >= 4){
+      for (data_size_t i = 0; i < cnt - 1 && i < truncation_level_; ++i) {
+        if (score[sorted_idx[i]] == kMinScore) { continue; }
+        for (data_size_t j = i + 1; j < cnt; ++j) {
+          if (score[sorted_idx[j]] == kMinScore) { continue; }
+          // skip pairs with the same labels
+          if (label[sorted_idx[i]] == label[sorted_idx[j]]) {continue;}
+          data_size_t high_rank, low_rank;
+          if (label[sorted_idx[i]] > label[sorted_idx[j]]) {
+            high_rank = i;
+            low_rank = j;
+          } else {
+            high_rank = j;
+            low_rank = i;
+          }
+          const data_size_t high = sorted_idx[high_rank];
+          const int high_label = static_cast<int>(label[high]);
+          const double high_score = score[high];
+          const double high_label_gain = label_gain_[high_label];
+          const double high_discount = DCGCalculator::GetDiscount(high_rank);
+          const data_size_t low = sorted_idx[low_rank];
+          const int low_label = static_cast<int>(label[low]);
+          const double low_score = score[low];
+          const double low_label_gain = label_gain_[low_label];
+          const double low_discount = DCGCalculator::GetDiscount(low_rank);
 
-        // get dcg gap
-        const double dcg_gap = high_label_gain - low_label_gain;
-        // get discount of this pair
-        const double paired_discount = fabs(high_discount - low_discount);
-        // get delta NDCG
-        double delta_pair_NDCG = (dcg_gap + 0.5* delta_intent)* paired_discount * inverse_max_dcg;
-        // Log::Info("query_id=%d, i=%d, j=%d, low label=%d, high label=%d, low intent=%f, high intent=%f",i, j, low_label,high_label, low_intent, high_intent);
-        // regular the delta_pair_NDCG by score distance
-        if (norm_ && best_score != worst_score) {
-          delta_pair_NDCG /= (0.01f + fabs(delta_score));
+          const double high_intent = intent[high];
+          const double low_intent = intent[low];
+          const double delta_intent = high_intent - low_intent;
+          const double delta_score = high_score - low_score;
+
+          // get dcg gap
+          const double dcg_gap = high_label_gain - low_label_gain;
+          // get discount of this pair
+          const double paired_discount = fabs(high_discount - low_discount);
+          // get delta NDCG
+          double delta_pair_NDCG = dcg_gap * paired_discount * inverse_max_dcg;
+          // Log::Info("query_id=%d, i=%d, j=%d, low label=%d, high label=%d, low intent=%f, high intent=%f ",i, j, low_label,high_label, low_intent, high_intent);
+          // regular the delta_pair_NDCG by score distance
+          if (norm_ && best_score != worst_score) {
+            delta_pair_NDCG /= (0.01f + fabs(delta_score));
+          }
+          // calculate lambda for this pair
+          double p_lambda = GetSigmoid(delta_score);
+          double p_hessian = p_lambda * (1.0f - p_lambda);
+          // update
+          p_lambda *= -sigmoid_ * delta_pair_NDCG;
+          p_hessian *= sigmoid_ * sigmoid_ * delta_pair_NDCG;
+          lambdas[low] -= static_cast<score_t>(p_lambda);
+          hessians[low] += static_cast<score_t>(p_hessian);
+          lambdas[high] += static_cast<score_t>(p_lambda);
+          hessians[high] += static_cast<score_t>(p_hessian);
+          // lambda is negative, so use minus to accumulate
+          sum_lambdas -= 2 * p_lambda;
+          // Iteration:1
+          // Log::Info("query_id=%d, qfreq=%f, label_i=%d, label_j=%d, high_rank=%d, low_rank=%d, p_lambda=%f, p_hessian=%f, delta_pair_NDCG=%f,\ 
+          //     delta_score=%f, high_score=%f, low_score=%f, delta_intent=%f, high_intent=%f, low_intent=%f",
+          //   query_id, t_qfreq, i, j, high_rank, low_rank, p_lambda, p_hessian, delta_pair_NDCG, delta_score, high_score, low_score, delta_intent, high_intent, low_intent);
         }
-        // calculate lambda for this pair
-        double p_lambda = GetSigmoid(delta_score);
-        double p_hessian = p_lambda * (1.0f - p_lambda);
-        // update
-        p_lambda *= -sigmoid_ * delta_pair_NDCG;
-        p_hessian *= sigmoid_ * sigmoid_ * delta_pair_NDCG;
-        lambdas[low] -= static_cast<score_t>(p_lambda);
-        hessians[low] += static_cast<score_t>(p_hessian);
-        lambdas[high] += static_cast<score_t>(p_lambda);
-        hessians[high] += static_cast<score_t>(p_hessian);
-        // lambda is negative, so use minus to accumulate
-        sum_lambdas -= 2 * p_lambda;
-        // Iteration:1
-        // Log::Info("query_id=%d, i=%d, j=%d, p_lambda=%f, p_hessian=%f, delta_pair_NDCG=%f, delta_score=%f, intent_gap=%f, high_score=%f, low_score=%f",
-          // query_id, i, j, p_lambda, p_hessian, delta_pair_NDCG, delta_score, delta_intent, high_score, low_score);
+      }
+    }else{
+      for (data_size_t i = 0; i < cnt - 1 && i < truncation_level_; ++i) {
+        if (score[sorted_idx[i]] == kMinScore) { continue; }
+        for (data_size_t j = i + 1; j < cnt; ++j) {
+          if (score[sorted_idx[j]] == kMinScore) { continue; }
+          // skip pairs with the same labels
+
+          data_size_t high_rank, low_rank;
+          if (label[sorted_idx[i]] == label[sorted_idx[j]]) { 
+            if(intent[sorted_idx[i]] == intent[sorted_idx[j]]){continue;}
+            if(intent[sorted_idx[i]] > intent[sorted_idx[j]]){
+              high_rank = i;
+              low_rank = j;
+            }else{
+              high_rank = j;
+              low_rank = i;
+            }
+          }
+          else{
+            if (label[sorted_idx[i]] > label[sorted_idx[j]]) {
+              high_rank = i;
+              low_rank = j;
+            } else {
+              high_rank = j;
+              low_rank = i;
+            }
+          }
+          const data_size_t high = sorted_idx[high_rank];
+          const int high_label = static_cast<int>(label[high]);
+          const double high_score = score[high];
+          const double high_label_gain = label_gain_[high_label];
+          const double high_discount = DCGCalculator::GetDiscount(high_rank);
+          const data_size_t low = sorted_idx[low_rank];
+          const int low_label = static_cast<int>(label[low]);
+          const double low_score = score[low];
+          const double low_label_gain = label_gain_[low_label];
+          const double low_discount = DCGCalculator::GetDiscount(low_rank);
+
+          const double high_intent = intent[high];
+          const double low_intent = intent[low];
+          const double delta_intent = high_intent - low_intent;
+          const double delta_score = high_score - low_score;
+
+          // get dcg gap
+          const double dcg_gap = high_label_gain - low_label_gain;
+          // get discount of this pair
+          const double paired_discount = fabs(high_discount - low_discount);
+          // get delta NDCG
+          const double tmp_delta_ndcg = dcg_gap * paired_discount * inverse_max_dcg;
+          double delta_pair_NDCG = 0.5 * tmp_delta_ndcg + 0.5* delta_intent;
+          // Log::Info("query_id=%d, i=%d, j=%d, low label=%d, high label=%d, low intent=%f, high intent=%f ",i, j, low_label,high_label, low_intent, high_intent);
+          // regular the delta_pair_NDCG by score distance
+          if (norm_ && best_score != worst_score) {
+            delta_pair_NDCG /= (0.01f + fabs(delta_score));
+          }
+          // calculate lambda for this pair
+          double p_lambda = GetSigmoid(delta_score);
+          double p_hessian = p_lambda * (1.0f - p_lambda);
+          // update
+          p_lambda *= -sigmoid_ * delta_pair_NDCG;
+          p_hessian *= sigmoid_ * sigmoid_ * delta_pair_NDCG;
+          lambdas[low] -= static_cast<score_t>(p_lambda);
+          hessians[low] += static_cast<score_t>(p_hessian);
+          lambdas[high] += static_cast<score_t>(p_lambda);
+          hessians[high] += static_cast<score_t>(p_hessian);
+          // lambda is negative, so use minus to accumulate
+          sum_lambdas -= 2 * p_lambda;
+          // Iteration:1
+          for (data_size_t mm = 0; mm < cnt; ++mm) {
+            Log::Info("%f", score[mm]);
+          }
+          Log::Info("query_id=%d, qfreq=%f, high_label=%d, low_label=%d, high_rank=%d, low_rank=%d, p_lambda=%f, p_hessian=%f, delta_pair_NDCG=%f, tmp_delta_ndcg=%f, delta_score=%f, high_score=%f, low_score=%f, delta_intent=%f, high_intent=%f, low_intent=%f",
+            query_id, t_qfreq, high_label, low_label, high_rank, low_rank, p_lambda, p_hessian, delta_pair_NDCG, tmp_delta_ndcg, delta_score, high_score, low_score, delta_intent, high_intent, low_intent);
+        }
       }
     }
     if (norm_ && sum_lambdas > 0) {
@@ -312,7 +395,7 @@ class RankXENDCG : public RankingObjective {
   inline void GetGradientsForOneQuery(data_size_t query_id, data_size_t cnt,
                                       const label_t* label, const double* score,
                                       score_t* lambdas,
-                                      score_t* hessians, const double* intent) const override {
+                                      score_t* hessians, const double* intent, const double* qfreq) const override {
     // Skip groups with too few items.
     if (cnt <= 1) {
       for (data_size_t i = 0; i < cnt; ++i) {

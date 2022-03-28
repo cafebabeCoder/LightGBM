@@ -88,6 +88,7 @@ class Metadata {
 
   void SetLabel(const label_t* label, data_size_t len);
   void SetIntent(const double* intent, data_size_t len);
+  void SetQfreq(const double* qfreq, data_size_t len);
 
   void SetWeights(const label_t* weights, data_size_t len);
 
@@ -121,6 +122,7 @@ class Metadata {
   * \return Pointer of intent 
   */
   inline const double* intent() const { return intent_.data(); }
+  inline const double* qfreq() const { return qfreq_.data(); }
   /*!
   * \brief Set label for one record
   * \param idx Index of this record
@@ -136,6 +138,14 @@ class Metadata {
   */
   inline void SetIntentAt(data_size_t idx, label_t value) {
     intent_[idx] = value;
+  }
+/*!
+  * \brief Set intent for one record
+  * \param idx Index of this record
+  * \param value Label value of this record
+  */
+  inline void SetQfreqAt(data_size_t idx, label_t value) {
+    qfreq_[idx] = value;
   }
   /*!
   * \brief Set Weight for one record
@@ -242,6 +252,8 @@ class Metadata {
   /*! \brief Intent data */
   std::vector<double> intent_;
 
+  /*! \brief qfreq data */
+  std::vector<double> qfreq_;
   /*! \brief Weights data */
   std::vector<label_t> weights_;
   /*! \brief Query boundaries */

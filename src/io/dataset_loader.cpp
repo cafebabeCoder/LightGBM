@@ -1175,12 +1175,17 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
       std::vector<bool> is_feature_added(dataset->num_features_, false);
       // push data
       for (auto& inner_data : oneline_features) {
+          if (inner_data.first == 37){
+            dataset->metadata_.SetIntentAt(i, inner_data.second);
+            // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
+            continue;
+          }
         if (inner_data.first >= dataset->num_total_features_) { continue; }
-
         int feature_idx = dataset->used_feature_map_[inner_data.first];
         if (feature_idx >= 0) {
-          if (inner_data.first == 26){
-            dataset->metadata_.SetIntentAt(i, inner_data.second);
+
+          if (inner_data.first == 25){
+            dataset->metadata_.SetQfreqAt(i, inner_data.second);
             // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
           }
           is_feature_added[feature_idx] = true;
@@ -1237,11 +1242,17 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
       // push data
       std::vector<bool> is_feature_added(dataset->num_features_, false);
       for (auto& inner_data : oneline_features) {
+          if (inner_data.first == 37){
+            dataset->metadata_.SetIntentAt(i, inner_data.second);
+            continue;
+            // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
+          }
         if (inner_data.first >= dataset->num_total_features_) { continue; }
         int feature_idx = dataset->used_feature_map_[inner_data.first];
         if (feature_idx >= 0) {
-          if (inner_data.first == 26){
-            dataset->metadata_.SetIntentAt(i, inner_data.second);
+
+          if (inner_data.first == 25){
+            dataset->metadata_.SetQfreqAt(i, inner_data.second);
             // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
           }
           is_feature_added[feature_idx] = true;
