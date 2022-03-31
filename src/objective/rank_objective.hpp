@@ -264,7 +264,6 @@ class LambdarankNDCG : public RankingObjective {
           if (score[sorted_idx[j]] == kMinScore) { continue; }
           // if(j > truncation_level_){continue;}
           // skip pairs with the same labels
-
           data_size_t high_rank, low_rank;
           double delta = 1.0;
           if (label[sorted_idx[i]] == label[sorted_idx[j]]) { 
@@ -281,7 +280,6 @@ class LambdarankNDCG : public RankingObjective {
           }
           else{
             if (label[sorted_idx[i]] > label[sorted_idx[j]]) {
-
               high_rank = i;
               low_rank = j;
             } else {
@@ -323,8 +321,8 @@ class LambdarankNDCG : public RankingObjective {
           // get discount of this pair
           const double paired_discount = fabs(high_discount - low_discount);
           // get delta NDCG
-          const double tmp_delta_ndcg = (dcg_gap ) * paired_discount * inverse_max_dcg;
-          double delta_pair_NDCG = 0.5 * tmp_delta_ndcg; // + delta * delta_intent;
+          const double tmp_delta_ndcg = (dcg_gap) * paired_discount * inverse_max_dcg;
+          double delta_pair_NDCG = 0.5 * tmp_delta_ndcg + 0.01 * delta_intent;
           // Log::Info("query_id=%d, i=%d, j=%d, low label=%d, high label=%d, low intent=%f, high intent=%f ",i, j, low_label,high_label, low_intent, high_intent);
           // regular the delta_pair_NDCG by score distance
           if (norm_ && best_score != worst_score) {
@@ -343,8 +341,8 @@ class LambdarankNDCG : public RankingObjective {
           // lambda is negative, so use minus to accumulate
           sum_lambdas -= 2 * p_lambda;
           // Iteration:1
-          Log::Info("query_id=%d, qfreq=%f, i=%d, j=%d, high_label=%d, low_label=%d, high_rank=%d, low_rank=%d, p_lambda=%f, p_hessian=%f, delta_pair_NDCG=%f, tmp_delta_ndcg=%f, delta_score=%f, high_score=%f, low_score=%f, delta_intent=%f, high_intent=%f, low_intent=%f, max_intent=%f",
-            query_id, t_qfreq, i, j, high_label, low_label, high_rank, low_rank, p_lambda, p_hessian, delta_pair_NDCG, tmp_delta_ndcg, delta_score, high_score, low_score, delta_intent, high_intent, low_intent, max_intents_[query_id]);
+          // Log::Info("query_id=%d, qfreq=%f, i=%d, j=%d, high_label=%d, low_label=%d, high_rank=%d, low_rank=%d, p_lambda=%f, p_hessian=%f, delta_pair_NDCG=%f, tmp_delta_ndcg=%f, delta_score=%f, high_score=%f, low_score=%f, delta_intent=%f, high_intent=%f, low_intent=%f, max_intent=%f",
+            // query_id, t_qfreq, i, j, high_label, low_label, high_rank, low_rank, p_lambda, p_hessian, delta_pair_NDCG, tmp_delta_ndcg, delta_score, high_score, low_score, delta_intent, high_intent, low_intent, max_intents_[query_id]);
         }
       }
     }
