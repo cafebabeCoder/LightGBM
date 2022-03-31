@@ -1176,18 +1176,23 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
       // push data
       for (auto& inner_data : oneline_features) {
           if (inner_data.first == 37){
-            dataset->metadata_.SetIntentAt(i, inner_data.second);
+            if(inner_data.second > 0)
+              dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
+            else
+              dataset->metadata_.SetIntentAt(i, std::max(-10.0, inner_data.second));
+            // if(fabs(inner_data.second) > 1)
+            // Log::Info("i=%d, intent=%f, max=%f, min=%f",i, inner_data.second, std::max(-1.0, inner_data.second), std::min(1.0, inner_data.second));
+            // continue;
+          }
+          if (inner_data.first == 25){
+            dataset->metadata_.SetQfreqAt(i, inner_data.second);
             // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
-            continue;
           }
         if (inner_data.first >= dataset->num_total_features_) { continue; }
         int feature_idx = dataset->used_feature_map_[inner_data.first];
         if (feature_idx >= 0) {
 
-          if (inner_data.first == 25){
-            dataset->metadata_.SetQfreqAt(i, inner_data.second);
-            // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
-          }
+
           is_feature_added[feature_idx] = true;
           // if is used feature
           int group = dataset->feature2group_[feature_idx];
@@ -1243,18 +1248,21 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
       std::vector<bool> is_feature_added(dataset->num_features_, false);
       for (auto& inner_data : oneline_features) {
           if (inner_data.first == 37){
-            dataset->metadata_.SetIntentAt(i, inner_data.second);
-            continue;
+            if(inner_data.second > 0)
+              dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
+            else
+              dataset->metadata_.SetIntentAt(i, std::max(-10.0, inner_data.second));
+            // if(fabs(inner_data.second) > 1)
+            // Log::Info("i=%d, intent=%f, max=%f, min=%f",i, inner_data.second, std::max(-1.0, inner_data.second), std::min(1.0, inner_data.second));
+            // continue;
+          }
+          if (inner_data.first == 25){
+            dataset->metadata_.SetQfreqAt(i, inner_data.second);
             // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
           }
         if (inner_data.first >= dataset->num_total_features_) { continue; }
         int feature_idx = dataset->used_feature_map_[inner_data.first];
         if (feature_idx >= 0) {
-
-          if (inner_data.first == 25){
-            dataset->metadata_.SetQfreqAt(i, inner_data.second);
-            // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
-          }
           is_feature_added[feature_idx] = true;
           // if is used feature
           int group = dataset->feature2group_[feature_idx];
@@ -1325,6 +1333,15 @@ void DatasetLoader::ExtractFeaturesFromFile(const char* filename, const Parser* 
       std::vector<bool> is_feature_added(dataset->num_features_, false);
       // push data
       for (auto& inner_data : oneline_features) {
+          if (inner_data.first == 37){
+            dataset->metadata_.SetIntentAt(i, inner_data.second);
+            // continue;
+            // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
+          }
+          if (inner_data.first == 25){
+            dataset->metadata_.SetQfreqAt(i, inner_data.second);
+            // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
+          }
         if (inner_data.first >= dataset->num_total_features_) { continue; }
         // if (inner_data.first == 1){
           // dataset->metadata_.SetIntentAt(start_idx + i, inner_data.second);
