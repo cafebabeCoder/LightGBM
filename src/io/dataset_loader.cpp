@@ -1179,7 +1179,8 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
             if(inner_data.second > 0)
               dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
             else
-              dataset->metadata_.SetIntentAt(i, std::max(-10.0, inner_data.second));
+              dataset->metadata_.SetIntentAt(i, 0);
+              // dataset->metadata_.SetIntentAt(i, std::max(-10.0, inner_data.second));
             // if(fabs(inner_data.second) > 1)
             // Log::Info("i=%d, intent=%f, max=%f, min=%f",i, inner_data.second, std::max(-1.0, inner_data.second), std::min(1.0, inner_data.second));
             // continue;
@@ -1251,7 +1252,8 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
             if(inner_data.second > 0)
               dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
             else
-              dataset->metadata_.SetIntentAt(i, std::max(-10.0, inner_data.second));
+              // dataset->metadata_.SetIntentAt(i, std::max(-10.0, inner_data.second));
+              dataset->metadata_.SetIntentAt(i, 0);
             // if(fabs(inner_data.second) > 1)
             // Log::Info("i=%d, intent=%f, max=%f, min=%f",i, inner_data.second, std::max(-1.0, inner_data.second), std::min(1.0, inner_data.second));
             // continue;
