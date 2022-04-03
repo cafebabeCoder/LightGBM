@@ -322,7 +322,7 @@ class LambdarankNDCG : public RankingObjective {
           // get discount of this pair
           const double paired_discount = fabs(high_discount - low_discount);
           // get delta NDCG
-          const double tmp_delta_ndcg = ((delta * dcg_gap) * paired_discount * inverse_max_dcg;
+          const double tmp_delta_ndcg = (delta * dcg_gap) * paired_discount * inverse_max_dcg;
           double delta_pair_NDCG = tmp_delta_ndcg ;
           // Log::Info("query_id=%d, i=%d, j=%d, low label=%d, high label=%d, low intent=%f, high intent=%f ",i, j, low_label,high_label, low_intent, high_intent);
           // regular the delta_pair_NDCG by score distance
