@@ -266,10 +266,10 @@ class LambdarankNDCG : public RankingObjective {
           // if(j > truncation_level_){continue;}
           // skip pairs with the same labels
           data_size_t high_rank, low_rank;
-          double delta = 1.0/(10 + pow(2.7, t_qfreq));
+          double delta = 1.0/(t_qfreq+1);
           if (label[sorted_idx[i]] == label[sorted_idx[j]]) { 
             // continue;
-            if(intent[sorted_idx[i]] == intent[sorted_idx[j]]){continue;}
+            if(fabs(intent[sorted_idx[i]] - intent[sorted_idx[j]])<0.5){continue;}
             if(intent[sorted_idx[i]] > intent[sorted_idx[j]]){
               high_rank = i;
               low_rank = j;
@@ -322,7 +322,7 @@ class LambdarankNDCG : public RankingObjective {
           // get discount of this pair
           const double paired_discount = fabs(high_discount - low_discount);
           // get delta NDCG
-          const double tmp_delta_ndcg = ((1-delta) * dcg_gap + delta * delta_intent) * paired_discount * inverse_max_dcg;
+          const double tmp_delta_ndcg = ((delta * dcg_gap) * paired_discount * inverse_max_dcg;
           double delta_pair_NDCG = tmp_delta_ndcg ;
           // Log::Info("query_id=%d, i=%d, j=%d, low label=%d, high label=%d, low intent=%f, high intent=%f ",i, j, low_label,high_label, low_intent, high_intent);
           // regular the delta_pair_NDCG by score distance
