@@ -209,7 +209,7 @@ class LambdarankNDCG : public RankingObjective {
           delta = 0.1;
         if (label[sorted_idx[i]] == label[sorted_idx[j]]) { 
           if(!is_low_freq){continue;}
-          // if(fabs(intent[sorted_idx[i]] - intent[sorted_idx[j]])<0.5){continue;}
+          if(fabs(intent[sorted_idx[i]] - intent[sorted_idx[j]])<0.01){continue;}
           if(intent[sorted_idx[i]] > intent[sorted_idx[j]]){
             high_rank = i;
             low_rank = j;
@@ -252,7 +252,8 @@ class LambdarankNDCG : public RankingObjective {
         const double high_intent = intent[high];
         const double low_intent = intent[low];
         double delta_intent = (high_intent - low_intent);
-        delta_intent = 0.5 * delta_intent / (0.01 + fabs(max_intents_[query_id])) + 0.5;
+        // delta_intent = 0.5 * delta_intent / (0.01 + fabs(max_intents_[query_id])) + 0.5;
+        delta_intent = GetSigmoid(delta_intent)-0.5;
         const double delta_score = high_score - low_score;
 
         // get dcg gap
