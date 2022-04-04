@@ -209,7 +209,7 @@ class LambdarankNDCG : public RankingObjective {
           delta = 0.1;
         if (label[sorted_idx[i]] == label[sorted_idx[j]]) { 
           if(!is_low_freq){continue;}
-          // if(fabs(intent[sorted_idx[i]] - intent[sorted_idx[j]])<0.5){continue;}
+          if(fabs(intent[sorted_idx[i]] - intent[sorted_idx[j]])<0.5){continue;}
           if(intent[sorted_idx[i]] > intent[sorted_idx[j]]){
             high_rank = i;
             low_rank = j;
