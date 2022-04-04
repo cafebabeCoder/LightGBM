@@ -1175,7 +1175,7 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
       std::vector<bool> is_feature_added(dataset->num_features_, false);
       // push data
       for (auto& inner_data : oneline_features) {
-          if (inner_data.first == 26){
+          if (inner_data.first == 37){
             if(inner_data.second > 0)
               dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
             else
@@ -1248,7 +1248,7 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
       // push data
       std::vector<bool> is_feature_added(dataset->num_features_, false);
       for (auto& inner_data : oneline_features) {
-          if (inner_data.first == 26){
+          if (inner_data.first == 37){
             if(inner_data.second > 0)
               dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
             else
