@@ -227,17 +227,6 @@ class LambdarankNDCG : public RankingObjective {
             low_rank = i;
           }
         }
-
-        // skip pairs with the same labels
-        // data_size_t high_rank, low_rank;
-        // if(intent[sorted_idx[i]] == intent[sorted_idx[j]]){continue;}
-        // if (intent[sorted_idx[i]] > intent[sorted_idx[j]]) {
-        //   high_rank = i;
-        //   low_rank = j;
-        // } else {
-        //   high_rank = j;
-        //   low_rank = i;
-        // }
         const data_size_t high = sorted_idx[high_rank];
         const int high_label = static_cast<int>(label[high]);
         const double high_score = score[high];
