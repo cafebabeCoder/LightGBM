@@ -206,10 +206,10 @@ class LambdarankNDCG : public RankingObjective {
         data_size_t high_rank, low_rank;
         double delta = 0.0;
         if(is_low_freq)
-          delta = 0.1;
+          delta = 0.5;
         if (label[sorted_idx[i]] == label[sorted_idx[j]]) { 
           if(!is_low_freq){continue;}
-          if(fabs(intent[sorted_idx[i]] - intent[sorted_idx[j]])<0.5){continue;}
+          if(fabs(intent[sorted_idx[i]] - intent[sorted_idx[j]])<0.00001){continue;}
           if(intent[sorted_idx[i]] > intent[sorted_idx[j]]){
             high_rank = i;
             low_rank = j;
@@ -252,7 +252,7 @@ class LambdarankNDCG : public RankingObjective {
         const double high_intent = intent[high];
         const double low_intent = intent[low];
         double delta_intent = (high_intent - low_intent);
-        delta_intent = 0.5 * delta_intent / (0.01 + fabs(max_intents_[query_id])) + 0.5;
+        // delta_intent = 0.5 * delta_intent / (0.01 + fabs(max_intents_[query_id])) + 0.5;
         const double delta_score = high_score - low_score;
 
         // get dcg gap
@@ -262,8 +262,8 @@ class LambdarankNDCG : public RankingObjective {
         // get delta NDCG
         const double tmp_delta_ndcg = (dcg_gap + delta * delta_intent) * paired_discount * inverse_max_dcg;
         double delta_pair_NDCG = tmp_delta_ndcg ;
-        if(is_low_freq)
-          delta_pair_NDCG = 0.5 * tmp_delta_ndcg;
+        // if(is_low_freq)
+          // delta_pair_NDCG = 0.5 * tmp_delta_ndcg;
         // Log::Info("query_id=%d, i=%d, j=%d, low label=%d, high label=%d, low intent=%f, high intent=%f ",i, j, low_label,high_label, low_intent, high_intent);
         // regular the delta_pair_NDCG by score distance
         if (norm_ && best_score != worst_score) {

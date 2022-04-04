@@ -1173,18 +1173,23 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
       // shrink_to_fit will be very slow in linux, and seems not free memory, disable for now
       // text_reader_->Lines()[i].shrink_to_fit();
       std::vector<bool> is_feature_added(dataset->num_features_, false);
+      // bool is_high_intent = false;
       // push data
       for (auto& inner_data : oneline_features) {
-          if (inner_data.first == 37){
-            if(inner_data.second > 0)
-              dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
-            else
-              // dataset->metadata_.SetIntentAt(i, 0);
-              dataset->metadata_.SetIntentAt(i, std::max(-10.0, inner_data.second));
+          if( inner_data.first == 26 && inner_data.second > 0.8)
+            dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
+            // is_high_intent = true;
+          // if (inner_data.first == 37 && is_high_intent){
+            // dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
+            // if(inner_data.second > 0)
+            //   dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
+            // else
+            //   // dataset->metadata_.SetIntentAt(i, 0);
+            //   dataset->metadata_.SetIntentAt(i, std::max(-10.0, inner_data.second));
             // if(fabs(inner_data.second) > 1)
             // Log::Info("i=%d, intent=%f, max=%f, min=%f",i, inner_data.second, std::max(-1.0, inner_data.second), std::min(1.0, inner_data.second));
             // continue;
-          }
+          // }
           if (inner_data.first == 25){
             dataset->metadata_.SetQfreqAt(i, inner_data.second);
             // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
@@ -1247,17 +1252,24 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
       // text_reader_->Lines()[i].shrink_to_fit();
       // push data
       std::vector<bool> is_feature_added(dataset->num_features_, false);
+
+      // bool is_high_intent = false;
       for (auto& inner_data : oneline_features) {
-          if (inner_data.first == 37){
-            if(inner_data.second > 0)
-              dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
-            else
-              dataset->metadata_.SetIntentAt(i, std::max(-10.0, inner_data.second));
+          if( inner_data.first == 26 && inner_data.second > 0.8)
+            dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
+            // is_high_intent = true;
+          // if (inner_data.first == 37 && is_high_intent){
+            // dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
+          // if (inner_data.first == 37){
+          //   if(inner_data.second > 0)
+          //     dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
+          //   else
+          //     dataset->metadata_.SetIntentAt(i, std::max(-10.0, inner_data.second));
               // dataset->metadata_.SetIntentAt(i, 0);
             // if(fabs(inner_data.second) > 1)
             // Log::Info("i=%d, intent=%f, max=%f, min=%f",i, inner_data.second, std::max(-1.0, inner_data.second), std::min(1.0, inner_data.second));
             // continue;
-          }
+          // }
           if (inner_data.first == 25){
             dataset->metadata_.SetQfreqAt(i, inner_data.second);
             // Log::Info("i=%d, first=%d, second=%f",i, inner_data.first, inner_data.second);
