@@ -243,16 +243,6 @@ class LambdarankNDCG : public RankingObjective {
           }
         }
 
-        // skip pairs with the same labels
-        // data_size_t high_rank, low_rank;
-        // if(intent[sorted_idx[i]] == intent[sorted_idx[j]]){continue;}
-        // if (intent[sorted_idx[i]] > intent[sorted_idx[j]]) {
-        //   high_rank = i;
-        //   low_rank = j;
-        // } else {
-        //   high_rank = j;
-        //   low_rank = i;
-        // }
         const data_size_t high = sorted_idx[high_rank];
         const int high_label = static_cast<int>(label[high]);
         const double high_score = score[high];
@@ -271,7 +261,8 @@ class LambdarankNDCG : public RankingObjective {
         if(delta_intent > 0)
           delta_intent = std::min(1.0, delta_intent); 
         else
-          delta_intent = std::max(-1.0, delta_intent); 
+          // delta_intent = std::max(-1.0, delta_intent); 
+          delta_intent = std::max(0.0, delta_intent); 
         // delta_intent = 0.5 * delta_intent / (0.01 + fabs(max_intents_[query_id])) + 0.5;
         // delta_intent = GetSigmoid(delta_intent)-0.5;
         // delta_intent = (delta_intent - min_intents_[query_id]) / (max_intents_[query_id] - min_intents_[query_id]);
