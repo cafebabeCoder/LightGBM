@@ -219,9 +219,9 @@ class LambdarankNDCG : public RankingObjective {
         if (score[sorted_idx[j]] == kMinScore) { continue; }
         // skip pairs with the same labels
         data_size_t high_rank, low_rank;
-        double delta = 0.0;
+        double delta = 0.5;
         if(is_low_freq)
-          delta = 1.0;
+          delta = 0.5;
         if (label[sorted_idx[i]] == label[sorted_idx[j]]) { 
           if(!is_low_freq){continue;}
           if(fabs(std::max(0.0, intent[sorted_idx[i]]) - std::max(0.0, intent[sorted_idx[j]]))<0.01){continue;}
