@@ -211,6 +211,7 @@ class LambdarankNDCG : public RankingObjective {
 
     const double t_qfreq = qfreq[0];
     bool is_low_freq = false;
+    
     if(t_qfreq <= 3)
       is_low_freq = true;
     for (data_size_t i = 0; i < cnt - 1 && i < truncation_level_; ++i) {
