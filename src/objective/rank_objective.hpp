@@ -219,12 +219,12 @@ class LambdarankNDCG : public RankingObjective {
         if (score[sorted_idx[j]] == kMinScore) { continue; }
         // skip pairs with the same labels
         data_size_t high_rank, low_rank;
-        double delta = 0.5;
+        double delta = 0.0;
         if(is_low_freq)
           delta = 0.5;
         if (label[sorted_idx[i]] == label[sorted_idx[j]]) { 
           if(!is_low_freq){continue;}
-          if(fabs(std::max(0.0, intent[sorted_idx[i]]) - std::max(0.0, intent[sorted_idx[j]]))<0.01){continue;}
+          if(intent[sorted_idx[i]] < 0.7 && intent[sorted_idx[j]]<0.7){continue;}
           if(intent[sorted_idx[i]] > intent[sorted_idx[j]]){
             high_rank = i;
             low_rank = j;
@@ -253,10 +253,14 @@ class LambdarankNDCG : public RankingObjective {
         const double low_label_gain = label_gain_[low_label];
         const double low_discount = DCGCalculator::GetDiscount(low_rank);
 
-        const double high_intent = std::max(0.0, intent[high]);
-        const double low_intent = std::max(0.0, intent[low]);
+        double high_intent = 0.0;
+        if(intent[high] >= 0.7)
+          high_intent = intent[high];
+        double low_intent = 0.0;
+        if(intent[low] >= 0.7)
+          low_intent = intent[low];
         double delta_intent = (high_intent - low_intent);
-        delta_intent = 1.0 * delta_intent / (0.01 + fabs(max_intents_[query_id]));
+        // delta_intent = 1.0 * delta_intent / (0.01 + fabs(max_intents_[query_id]));
         if(delta_intent > 0)
           delta_intent = std::min(1.0, delta_intent); 
         else

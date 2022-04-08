@@ -1176,7 +1176,7 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
       // bool is_high_intent = false;
       // push data
       for (auto& inner_data : oneline_features) {
-          if( inner_data.first == 26 && inner_data.second > 0.8)
+          if( inner_data.first == 26)
             dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
             // is_high_intent = true;
           // if (inner_data.first == 37 && is_high_intent){
@@ -1255,7 +1255,7 @@ void DatasetLoader::ExtractFeaturesFromMemory(std::vector<std::string>* text_dat
 
       // bool is_high_intent = false;
       for (auto& inner_data : oneline_features) {
-          if( inner_data.first == 26 && inner_data.second > 0.8)
+          if( inner_data.first == 26)
             dataset->metadata_.SetIntentAt(i, std::min(10.0, inner_data.second));
             // is_high_intent = true;
           // if (inner_data.first == 37 && is_high_intent){
