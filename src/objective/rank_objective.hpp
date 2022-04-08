@@ -126,13 +126,25 @@ class LambdarankNDCG : public RankingObjective {
 
   ~LambdarankNDCG() {}
 
+  double CalMinIntent(data_size_t k, const double* intent, data_size_t num_data) {
+    double ret = 0.0f;
+
+    if (k > num_data) { k = num_data; }
+    for (data_size_t i = 0; i < k; ++i) {
+      for (data_size_t j = 0; j < k; ++j) {
+        if(intent[i] - intent[j] < ret)
+          ret = intent[i] - intent[j];
+      }
+    }
+    return ret;
+  }
   double CalMaxIntent(data_size_t k, const double* intent, data_size_t num_data) {
     double ret = 0.0f;
 
-  // if (k > num_data) { k = num_data; }
-    for (data_size_t i = 0; i < num_data; ++i) {
-      for (data_size_t j = 0; j < k; ++j){
-        if(intent[i]-intent[j] > ret)
+    if (k > num_data) { k = num_data; }
+    for (data_size_t i = 0; i < k; ++i) {
+      for (data_size_t j = 0; j < k; ++j) {
+        if(intent[i] - intent[j] > ret)
           ret = intent[i] - intent[j];
       }
     }
@@ -145,6 +157,7 @@ class LambdarankNDCG : public RankingObjective {
     DCGCalculator::CheckLabel(label_, num_data_);
     inverse_max_dcgs_.resize(num_queries_);
     max_intents_.resize(num_queries_);
+    min_intents_.resize(num_queries_);
 #pragma omp parallel for schedule(static)
     for (data_size_t i = 0; i < num_queries_; ++i) {
       inverse_max_dcgs_[i] = DCGCalculator::CalMaxDCGAtK(
@@ -159,8 +172,10 @@ class LambdarankNDCG : public RankingObjective {
       max_intents_[i] = CalMaxIntent(
         truncation_level_, intent_ + query_boundaries_[i],
         query_boundaries_[i + 1] - query_boundaries_[i]);
+      min_intents_[i] = CalMinIntent(
+        truncation_level_, intent_ + query_boundaries_[i],
+        query_boundaries_[i + 1] - query_boundaries_[i]);
     }
-        // Log::Info("query_id=%d, max_intent=%f", i, max_intents_[i]);
     // construct Sigmoid table to speed up Sigmoid transform
     ConstructSigmoidTable();
   }
@@ -204,12 +219,12 @@ class LambdarankNDCG : public RankingObjective {
         if (score[sorted_idx[j]] == kMinScore) { continue; }
         // skip pairs with the same labels
         data_size_t high_rank, low_rank;
-        double delta = 0.0;
+        double delta = 0.5;
         if(is_low_freq)
           delta = 0.5;
         if (label[sorted_idx[i]] == label[sorted_idx[j]]) { 
           if(!is_low_freq){continue;}
-          if(fabs(intent[sorted_idx[i]] - intent[sorted_idx[j]])<0.00001){continue;}
+          if(fabs(std::max(0.0, intent[sorted_idx[i]]) - std::max(0.0, intent[sorted_idx[j]]))<0.01){continue;}
           if(intent[sorted_idx[i]] > intent[sorted_idx[j]]){
             high_rank = i;
             low_rank = j;
@@ -238,10 +253,18 @@ class LambdarankNDCG : public RankingObjective {
         const double low_label_gain = label_gain_[low_label];
         const double low_discount = DCGCalculator::GetDiscount(low_rank);
 
-        const double high_intent = intent[high];
-        const double low_intent = intent[low];
+        const double high_intent = std::max(0.0, intent[high]);
+        const double low_intent = std::max(0.0, intent[low]);
         double delta_intent = (high_intent - low_intent);
+        delta_intent = 1.0 * delta_intent / (0.01 + fabs(max_intents_[query_id]));
+        if(delta_intent > 0)
+          delta_intent = std::min(1.0, delta_intent); 
+        else
+          // delta_intent = std::max(-1.0, delta_intent); 
+          delta_intent = std::max(0.0, delta_intent); 
         // delta_intent = 0.5 * delta_intent / (0.01 + fabs(max_intents_[query_id])) + 0.5;
+        // delta_intent = GetSigmoid(delta_intent)-0.5;
+        // delta_intent = (delta_intent - min_intents_[query_id]) / (max_intents_[query_id] - min_intents_[query_id]);
         const double delta_score = high_score - low_score;
 
         // get dcg gap
@@ -271,8 +294,8 @@ class LambdarankNDCG : public RankingObjective {
         // lambda is negative, so use minus to accumulate
         sum_lambdas -= 2 * p_lambda;
         // Iteration:1
-        // Log::Info("query_id=%d, qfreq=%f, i=%d, j=%d, high_label=%d, low_label=%d, high_rank=%d, low_rank=%d, p_lambda=%f, p_hessian=%f, delta_pair_NDCG=%f, tmp_delta_ndcg=%f, delta_score=%f, high_score=%f, low_score=%f, delta_intent=%f, high_intent=%f, low_intent=%f, max_intent=%f",
-          // query_id, t_qfreq, i, j, high_label, low_label, high_rank, low_rank, p_lambda, p_hessian, delta_pair_NDCG, tmp_delta_ndcg, delta_score, high_score, low_score, delta_intent, high_intent, low_intent, max_intents_[query_id]);
+        // Log::Info("query_id=%d, qfreq=%f, i=%d, j=%d, high_label=%d, low_label=%d, high_rank=%d, low_rank=%d, p_lambda=%f, p_hessian=%f, delta_pair_NDCG=%f, tmp_delta_ndcg=%f, delta_score=%f, high_score=%f, low_score=%f, delta_intent=%f, high_intent=%f, low_intent=%f, max_intent=%f, min_intent=%f",
+          // query_id, t_qfreq, i, j, high_label, low_label, high_rank, low_rank, p_lambda, p_hessian, delta_pair_NDCG, tmp_delta_ndcg, delta_score, high_score, low_score, delta_intent, high_intent, low_intent, max_intents_[query_id], min_intents_[query_id]);
       }
     }
     if (norm_ && sum_lambdas > 0) {
@@ -324,6 +347,7 @@ class LambdarankNDCG : public RankingObjective {
   /*! \brief Cache inverse max DCG, speed up calculation */
   std::vector<double> inverse_max_dcgs_;
   std::vector<double> max_intents_;
+  std::vector<double> min_intents_;
   /*! \brief Cache result for sigmoid transform to speed up */
   std::vector<double> sigmoid_table_;
   /*! \brief Gains for labels */
