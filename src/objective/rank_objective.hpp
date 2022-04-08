@@ -215,6 +215,8 @@ class LambdarankNDCG : public RankingObjective {
     if(t_qfreq <= 3)
       is_low_freq = true;
     for (data_size_t i = 0; i < cnt - 1 && i < truncation_level_; ++i) {
+
+      if(t_qfreq <= 0) {continue;}
       if (score[sorted_idx[i]] == kMinScore) { continue; }
       for (data_size_t j = i + 1; j < cnt; ++j) {
         if (score[sorted_idx[j]] == kMinScore) { continue; }
