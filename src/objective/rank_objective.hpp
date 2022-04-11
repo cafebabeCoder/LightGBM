@@ -116,6 +116,7 @@ class LambdarankNDCG : public RankingObjective {
     sigmoid_table_.clear();
     inverse_max_dcgs_.clear();
     max_intents_.clear();
+    min_intents_.clear();
     if (sigmoid_ <= 0.0) {
       Log::Fatal("Sigmoid param %f should be greater than zero", sigmoid_);
     }
@@ -207,27 +208,20 @@ class LambdarankNDCG : public RankingObjective {
     }
     const double worst_score = score[sorted_idx[worst_idx]];
     double sum_lambdas = 0.0;
+    bool is_low_freq = qfreq[0] <= 0 ? true : false;
+    double delta_a = 0.0, delta_b = 0.0;
     // start accmulate lambdas by pairs that contain at least one document above truncation level
-
-    const double t_qfreq = qfreq[0];
-    bool is_low_freq = false;
-    
-    if(t_qfreq <= 3)
-      is_low_freq = true;
     for (data_size_t i = 0; i < cnt - 1 && i < truncation_level_; ++i) {
-
-      if(t_qfreq <= 0) {continue;}
       if (score[sorted_idx[i]] == kMinScore) { continue; }
       for (data_size_t j = i + 1; j < cnt; ++j) {
         if (score[sorted_idx[j]] == kMinScore) { continue; }
-        // skip pairs with the same labels
         data_size_t high_rank, low_rank;
-        double delta = 0.0;
-        if(is_low_freq)
-          delta = 0.5;
-        if (label[sorted_idx[i]] == label[sorted_idx[j]]) { 
-          if(!is_low_freq){continue;}
-          if(intent[sorted_idx[i]] < 0.7 && intent[sorted_idx[j]]<0.7){continue;}
+        if(is_low_freq){  //低频
+          continue;
+          delta_a = 0.0;
+          delta_b = 0.5;
+          // skip pairs with the same labels
+          if((intent[sorted_idx[i]] < 0.7 && intent[sorted_idx[j]] < 0.7) || (intent[sorted_idx[i]] > 0.7 && intent[sorted_idx[j]] > 0.7)){continue;}
           if(intent[sorted_idx[i]] > intent[sorted_idx[j]]){
             high_rank = i;
             low_rank = j;
@@ -235,8 +229,11 @@ class LambdarankNDCG : public RankingObjective {
             high_rank = j;
             low_rank = i;
           }
-        }
-        else{
+        }else{ // 高频
+          delta_a = 1.0;
+          delta_b = 0.0;
+          // skip pairs with the same labels
+          if (label[sorted_idx[i]] == label[sorted_idx[j]]) { continue; }
           if (label[sorted_idx[i]] > label[sorted_idx[j]]) {
             high_rank = i;
             low_rank = j;
@@ -256,19 +253,12 @@ class LambdarankNDCG : public RankingObjective {
         const double low_label_gain = label_gain_[low_label];
         const double low_discount = DCGCalculator::GetDiscount(low_rank);
 
-        double high_intent = 0.0;
-        if(intent[high] >= 0.7)
-          high_intent = intent[high];
-        double low_intent = 0.0;
-        if(intent[low] >= 0.7)
-          low_intent = intent[low];
+        double high_intent = intent[high] >= 0.7 ? intent[high] : 0.0;
+        double low_intent = intent[low] >= 0.7 ? intent[low] : 0.0;
         double delta_intent = (high_intent - low_intent);
         // delta_intent = 1.0 * delta_intent / (0.01 + fabs(max_intents_[query_id]));
-        if(delta_intent > 0)
-          delta_intent = std::min(1.0, delta_intent); 
-        else
-          // delta_intent = std::max(-1.0, delta_intent); 
-          delta_intent = std::max(0.0, delta_intent); 
+        // delta_intent = delta_intent > 0 ? std::min(1.0, delta_intent) : std::max(0.0, delta_intent);
+        // delta_intent = std::max(-1.0, delta_intent); 
         // delta_intent = 0.5 * delta_intent / (0.01 + fabs(max_intents_[query_id])) + 0.5;
         // delta_intent = GetSigmoid(delta_intent)-0.5;
         // delta_intent = (delta_intent - min_intents_[query_id]) / (max_intents_[query_id] - min_intents_[query_id]);
@@ -279,11 +269,10 @@ class LambdarankNDCG : public RankingObjective {
         // get discount of this pair
         const double paired_discount = fabs(high_discount - low_discount);
         // get delta NDCG
-        const double tmp_delta_ndcg = (dcg_gap + delta * delta_intent) * paired_discount * inverse_max_dcg;
-        double delta_pair_NDCG = tmp_delta_ndcg ;
+        double  delta_pair_NDCG = (delta_a * dcg_gap + delta_b * delta_intent) * paired_discount * inverse_max_dcg;
         // if(is_low_freq)
           // delta_pair_NDCG = 0.5 * tmp_delta_ndcg;
-        // Log::Info("query_id=%d, i=%d, j=%d, low label=%d, high label=%d, low intent=%f, high intent=%f ",i, j, low_label,high_label, low_intent, high_intent);
+
         // regular the delta_pair_NDCG by score distance
         if (norm_ && best_score != worst_score) {
           delta_pair_NDCG /= (0.01f + fabs(delta_score));
@@ -301,8 +290,8 @@ class LambdarankNDCG : public RankingObjective {
         // lambda is negative, so use minus to accumulate
         sum_lambdas -= 2 * p_lambda;
         // Iteration:1
-        // Log::Info("query_id=%d, qfreq=%f, i=%d, j=%d, high_label=%d, low_label=%d, high_rank=%d, low_rank=%d, p_lambda=%f, p_hessian=%f, delta_pair_NDCG=%f, tmp_delta_ndcg=%f, delta_score=%f, high_score=%f, low_score=%f, delta_intent=%f, high_intent=%f, low_intent=%f, max_intent=%f, min_intent=%f",
-          // query_id, t_qfreq, i, j, high_label, low_label, high_rank, low_rank, p_lambda, p_hessian, delta_pair_NDCG, tmp_delta_ndcg, delta_score, high_score, low_score, delta_intent, high_intent, low_intent, max_intents_[query_id], min_intents_[query_id]);
+        // Log::Info("[%d], qf=%1.0f, %d-%d, rank=%d/%d, label=%d/%d, intent=%.3f/%.3f, score=%.3f/%.3f, la=%.3f, he=%.3f, dPairNDCG=%.3f, clk/intent=%.3f/%.3f, a/b=%.1f/%.1f",
+          // query_id, qfreq[0], i, j, high_rank, low_rank, high_label, low_label, high_intent, low_intent, high_score, low_score, p_lambda, p_hessian, delta_pair_NDCG, delta_a * dcg_gap, delta_b * delta_intent, delta_a, delta_b);
       }
     }
     if (norm_ && sum_lambdas > 0) {
