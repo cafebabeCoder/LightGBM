@@ -236,10 +236,10 @@ class LambdarankNDCG : public RankingObjective {
         const double low_label_gain = label_gain_[low_label];
         const double low_discount = DCGCalculator::GetDiscount(low_rank);
 
-        double high_intent = intent[high];
-        double low_intent = intent[low];
-        if(is_low_freq && (intent[high] >= 0.7))
-          delta_a = 2;
+        // double high_intent = intent[high];
+        // double low_intent = intent[low];
+        // if(is_low_freq && (intent[high] >= 0.3))
+        //   delta_a = 2;
         const double delta_score = high_score - low_score;
 
         // get dcg gap
@@ -248,9 +248,8 @@ class LambdarankNDCG : public RankingObjective {
         const double paired_discount = fabs(high_discount - low_discount);
         // get delta NDCG
         double delta_pair_NDCG = dcg_gap * paired_discount * inverse_max_dcg;
-        if(is_low_freq)
-          delta_pair_NDCG = (1 + delta_a) * delta_pair_NDCG;
-
+        // if(is_low_freq)
+        //   delta_pair_NDCG = (1 + delta_a) * delta_pair_NDCG;
         // regular the delta_pair_NDCG by score distance
         if (norm_ && best_score != worst_score) {
           delta_pair_NDCG /= (0.01f + fabs(delta_score));
